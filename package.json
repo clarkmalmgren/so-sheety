@@ -1,0 +1,12 @@
+{
+  "name": "so-sheety",
+  "version": "0.0.0",
+  "description": "Simplified wrapper for Google Sheets",
+  "main": "dist/index.js",
+  "repository": "https://github.com/clarkmalmgren/so-sheety",
+  "author": "Clark Malmgren",
+  "license": "MIT",
+  "dependencies": {
+    "typescript": "^5.5.3"
+  }
+}
