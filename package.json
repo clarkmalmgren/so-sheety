@@ -3,10 +3,23 @@
   "version": "0.0.0",
   "description": "Simplified wrapper for Google Sheets",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": "https://github.com/clarkmalmgren/so-sheety",
   "author": "Clark Malmgren",
   "license": "MIT",
   "dependencies": {
+    "@types/node": "^20.14.10",
     "typescript": "^5.5.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "tsc"
+  },
+  "peerDependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "googleapis": "^140.0.1"
   }
 }

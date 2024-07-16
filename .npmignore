@@ -8,9 +8,9 @@
 # testing
 /coverage
 
-# production
-/build
-/dist
+# production is INCLUDED so these are commented out on purpose
+# /build
+# /dist
 
 # firebase
 .firebase/
