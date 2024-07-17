@@ -9,12 +9,13 @@ export class Spreadsheet {
     const api = google.sheets({ version: 'v4', auth: oauth })
 
     const spreadsheet = await api.spreadsheets.get({ spreadsheetId: id, includeGridData: true })
-    return new Spreadsheet(api.spreadsheets, spreadsheet.data)
+    return new Spreadsheet(api.spreadsheets, spreadsheet.data, id)
   }
 
   constructor(
     readonly api: sheets_v4.Resource$Spreadsheets,
-    readonly spreadsheet: sheets_v4.Schema$Spreadsheet
+    readonly spreadsheet: sheets_v4.Schema$Spreadsheet,
+    readonly id: string
   ) {}
 
   sheet(name: string): Sheet {

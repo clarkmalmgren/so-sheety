@@ -1,4 +1,4 @@
-import { CellValue, isLink } from './CellValue'
+import { CellValue, cellValuesEqual, isLink } from './CellValue'
 import { ColumnLocator, Grid, RowObject } from './Grid'
 
 export class Row {
@@ -18,11 +18,7 @@ export class Row {
 
   eq(col: ColumnLocator, other: CellValue): boolean {
     const a = this.value(col)
-    if (isLink(a)) {
-      return isLink(other) ? (a.text === other.text && a.url === other.url) : false
-    } else {
-      return a === other
-    }
+    return cellValuesEqual(a, other)
   }
 
   isDefined(col: ColumnLocator): boolean {

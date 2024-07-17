@@ -1,4 +1,4 @@
-import { CellValue, isLink } from './CellValue'
+import { CellValue, cellValuesEqual, isLink } from './CellValue'
 import { Row } from './Row'
 
 export type RowObject = { [header: string]: CellValue }
@@ -106,6 +106,11 @@ export abstract class Grid {
       this.append()
     }
 
+    // If the value hasn't changed, we are done
+    const existing = this.data[row][col]
+    if (cellValuesEqual(existing, value, true)) { return }
+
+    // Ok, finally commit to making the change
     this.data[row][col] = value
     this._set(row, col, value)
   }

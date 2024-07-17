@@ -19,3 +19,17 @@ export function trimGrid(grid: CellValue[][]): CellValue[][] {
   while (i > -1 && rows[i].length === 0) { i-- }
   return rows.slice(0, i + 1)
 }
+
+function isEmpty(v: CellValue): boolean {
+  return (typeof v === 'undefined') ? true : v === ''
+}
+
+export function cellValuesEqual(a: CellValue, b: CellValue, loose: boolean = false): boolean {
+  if (isLink(a)) {
+    return isLink(b) ? (a.text === b.text && a.url === b.url) : false
+  } else if (loose && isEmpty(a) && isEmpty(b)) {
+    return true
+  } else {
+    return a === b
+  }
+}

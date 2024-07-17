@@ -49,12 +49,13 @@ export class Document {
       })
 
 
-    return new Document(tables, headers)
+    return new Document(tables, headers, id)
   }
 
   constructor(
     private readonly tables: TableRef[],
-    private readonly headers: { [title: string]: number }
+    private readonly headers: { [title: string]: number },
+    readonly id: string
   ) {
     this.tables.sort((a, b) => a.offset - b.offset)
   }
