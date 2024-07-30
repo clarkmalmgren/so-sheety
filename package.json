@@ -1,6 +1,6 @@
 {
   "name": "so-sheety",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Simplified wrapper for Google Sheets",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

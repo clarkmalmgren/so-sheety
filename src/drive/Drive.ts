@@ -44,4 +44,16 @@ export class Drive {
     return file.id as string
   }
 
+  async getComments(fileId: string): Promise<drive_v3.Schema$Comment[]> {
+    const resp = await this.api.comments.list({ fileId, fields: '*' })
+    return resp.data.comments || []
+  }
+
+  async updateComment(fileId: string, commentId: string, comment: string): Promise<void> {
+    await this.api.comments.update({
+      fileId, commentId,
+      requestBody: { content: comment },
+      fields: 'id'
+    })
+  }
 }
