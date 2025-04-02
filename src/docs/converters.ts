@@ -25,7 +25,9 @@ export function toCellValue(table: docs_v1.Schema$Table, row: number, col: numbe
   const txt = structure2text(cell.content)
   const num = +txt
 
-  if (!isNaN(num)) {
+  if (txt === '') {
+    return undefined
+  } else if (!isNaN(num)) {
     return num
   } else if (txt.toLowerCase() === 'true') {
     return true
