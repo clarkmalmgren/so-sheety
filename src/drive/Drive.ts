@@ -44,6 +44,10 @@ export class Drive {
     return file.id as string
   }
 
+  async delete(id: string): Promise<void> {
+    await this.api.files.delete({ fileId: id })
+  }
+
   async getComments(fileId: string): Promise<drive_v3.Schema$Comment[]> {
     const resp = await this.api.comments.list({ fileId, fields: '*' })
     return resp.data.comments || []

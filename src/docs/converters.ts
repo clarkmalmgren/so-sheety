@@ -1,14 +1,18 @@
 import { docs_v1 } from 'googleapis'
 import { CellValue } from '../grid/CellValue'
 
-export function paragraph2text(p: docs_v1.Schema$Paragraph): string {
+export function spans2text(spans: docs_v1.Schema$ParagraphElement[]): string {
   const strings: string[] = []
-  p.elements?.forEach(e => {
+  spans.forEach(e => {
     e.person && strings.push(e.person.personProperties?.name || e.person.personProperties?.email || '{unknown person}')
     e.richLink && strings.push(e.richLink.richLinkProperties?.uri || '{unknown rich link}')
     e.textRun && e.textRun.content && strings.push(e.textRun.content)
   })
   return strings.join(' ').trim()
+}
+
+export function paragraph2text(p: docs_v1.Schema$Paragraph): string {
+  return spans2text(p.elements || [])
 }
 
 export function structure2text(content: docs_v1.Schema$StructuralElement[]): string {

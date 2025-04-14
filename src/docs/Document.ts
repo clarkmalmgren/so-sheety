@@ -1,44 +1,30 @@
 import { docs_v1, google } from 'googleapis'
 import { Auth } from '../Auth'
-import { paragraph2text } from './converters'
-import { Table } from './Table'
+import { isParagraph, isTable, parseEl } from './refs'
+import { ElRef, RefMatcher } from './refs/ElRef'
+import { TableRef } from './refs/TableRef'
 
 export type HeaderSelector = number | string | ((h: string) => boolean)
 
-export type OffsetChange = {
-  index: number
-  delta: number
+function headerSelectorToMatcher(selector: HeaderSelector): RefMatcher {
+  return (r: ElRef<any>) => {
+    if (!isParagraph(r) || !r.isHeading) { return false }
+    
+    if (typeof selector === 'function') {
+      return selector(r.text)
+    } else if (typeof selector === 'number') {
+      return r.startIndex >= selector
+    } else if (typeof selector === 'string') {
+      return r.text === selector
+    } else {
+      return false
+    }
+  }
 }
 
 export type DocumentMutator = {
-  request(r: docs_v1.Schema$Request, offset?: OffsetChange): void
+  request(r: docs_v1.Schema$Request): void
   commit(): Promise<void>
-  getOffset(index: number): number
-}
-
-
-export class TableRef {
-
-  private _loaded: { [frozen: number]: Table } = {}
-  
-  constructor(
-    readonly offset: number,
-    private readonly source: docs_v1.Schema$Table,
-    private readonly startIndex: number,
-    private readonly endIndex: number,
-    private readonly mutator: DocumentMutator
-  ) {}
-
-  load(frozenRowCount: number = 0): Table {
-    const found = this._loaded[frozenRowCount]
-    if (found) {
-      return found
-    }
-
-    const made = Table.parse(this.source, frozenRowCount, this.startIndex, this.endIndex, this.mutator)
-    this._loaded[frozenRowCount] = made
-    return made
-  }
 }
 
 export class Document implements DocumentMutator {
@@ -48,94 +34,119 @@ export class Document implements DocumentMutator {
     const api = google.docs({ version: 'v1', auth: oauth })
     const document = await api.documents.get({ documentId: id })
 
-    return new Document(id, api, document.data)
+    return new Document(id, api, auth, document.data)
   }
 
   private initialized: boolean = false
-  private tables: TableRef[] = []
-  private headers: { [title: string]: number } = {}
+  private _head?: ElRef<any>
+  private _tail?: ElRef<any>
   private updates: docs_v1.Schema$Request[] = []
-  private offsets: OffsetChange[] = []
 
   constructor(
     public readonly id: string,
     private api: docs_v1.Docs,
+    private auth: Auth,
     private document: docs_v1.Schema$Document
   ) {}
 
-  request(req: docs_v1.Schema$Request, off?: OffsetChange): void {
+  request(req: docs_v1.Schema$Request): void {
     this.updates.push(req)
-    if (off) {
-      this.offsets.push(off)
-      this.offsets.sort((a, b) => a.index - b.index)
-    }
-  }
-  
-  getOffset(index: number): number {
-    return this.offsets.filter(o => o.index < index).reduce((acc, o) => acc + o.delta, 0)
   }
 
   async reload(): Promise<void> {
     this.initialized = false
-    this.tables = []
-    this.headers = {}
+    this._head = undefined
+    this._tail = undefined
     this.updates = []
-    
+
     this.document = await this.api.documents.get({ documentId: this.id })
+  }
+
+  get head(): ElRef<any> {
+    if (!this._head) { throw new Error('Head not initialized') }
+    return this._head
+  }
+
+  get tail(): ElRef<any> {
+    if (!this._tail) { throw new Error('Tail not initialized') }
+    return this._tail
   }
 
   init(): void {
     if (this.initialized) { return }
 
-    this.document.body
-      ?.content
-      ?.forEach(el => {
-        if (!el.startIndex || !el.endIndex) { return }
+    const elements = this.document.body?.content
+    if (!elements) { throw new Error('No elements found') }
+    let last: ElRef<any> | undefined
 
-        if (el.table) {
-          this.tables.push(new TableRef(el.startIndex, el.table, el.startIndex, el.endIndex, this))
-        } else if (el.paragraph && el.paragraph.paragraphStyle?.headingId) {
-          this.headers[paragraph2text(el.paragraph)] = el.startIndex
-        }
-      })
+    const refs = elements.map(el => {
+      let r = parseEl(el, this, last)
+      last?.setNext(r)
+      last = r
+      return r
+    })
 
-    this.tables.sort((a, b) => a.offset - b.offset)
+    this._head = refs[0]
+    this._tail = refs[refs.length - 1]
+
     this.initialized = true
   }
 
+  /**
+   * Find the first element that matches the selector.
+   * 
+   * @param selector - The selector to match.
+   * @param reverse - Whether to search in reverse order.
+   * @returns The first element that matches the selector, or undefined if no match is found.
+   */
+  find(selector: RefMatcher, reverse: boolean = false): ElRef<any> | undefined {
+    this.init()
+    const start = reverse ? this.tail : this.head
+    return start.find(selector, reverse)
+  }
+
+  /**
+   * Find the offset of the first element that matches the selector.
+   * 
+   * @param selector - The selector to match.
+   * @returns The offset of the first element that matches the selector, or undefined if no match is found.
+   */
   offset(selector: HeaderSelector): number | undefined {
     this.init()
-    if (typeof selector === 'function') {
-      const h = Object.keys(this.headers).find(selector)
-      return (typeof h === 'undefined') ? undefined : this.headers[h]
-    } else if (typeof selector === 'number') {
-      return selector
-    } else {
-      return this.headers[selector]
-    }
+    const fn = headerSelectorToMatcher(selector)
+    return this.head.find(fn)?.startIndex
   }
 
   firstTableAfter(start: HeaderSelector): TableRef | undefined {
     this.init()
-    const off = this.offset(start)
-    if (typeof off === 'undefined') { return undefined }
-    return this.tables.find(t => t.offset > off)
+    const startFn = headerSelectorToMatcher(start)
+
+    const firstHeader = this.head.find(startFn)
+    if (!firstHeader) { return undefined }
+
+    return firstHeader.next.find(isTable) as TableRef | undefined
   }
 
   tablesBetween(start: HeaderSelector, end?: HeaderSelector): TableRef[] {
     this.init()
-    const startOff = this.offset(start)
-    const endOff = typeof end === 'undefined' ? undefined : this.offset(end)
 
-    if (typeof startOff === 'undefined') {
-      return []
+    const startFn = headerSelectorToMatcher(start)
+    const endFn: RefMatcher =
+      typeof end === 'undefined' ? () => false : headerSelectorToMatcher(end)
+    
+    let tables: TableRef[] = []
+    for (let ref = this.head.find(startFn); ref && !endFn(ref); ref = ref.next) {
+      if (isTable(ref)) {
+        tables.push(ref)
+      }
     }
 
-    return this.tables.filter(t => t.offset > startOff && (typeof endOff === 'undefined' || t.offset < endOff))
+    return tables
   }
 
   async commit(): Promise<void> {
     this.init()
+    if (this.updates.length === 0) { return }
 
     await this.api.documents.batchUpdate({
       documentId: this.id,

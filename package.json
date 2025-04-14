@@ -1,6 +1,6 @@
 {
   "name": "so-sheety",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Simplified wrapper for Google Sheets",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,11 +12,20 @@
     "typescript": "^5.5.3"
   },
   "devDependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "@types/jest": "^29.5.14",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^148.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2"
   },
   "scripts": {
     "build": "tsc",
-    "prepublish": "tsc"
+    "prepublish": "tsc",
+    "test": "jest",
+    "test:single": "jest -t",
+    "test:watch": "jest --watch"
   },
   "peerDependencies": {
     "@google-cloud/local-auth": "^3.0.1",
