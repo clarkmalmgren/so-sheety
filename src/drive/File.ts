@@ -42,4 +42,12 @@ export class File {
 
     return await Spreadsheet.load(this.auth, this.file.id)
   }
+
+  get parents(): string[] {
+    return this.file.parents || []
+  }
+
+  get parent(): string | undefined {
+    return this.file.parents?.[0]
+  }
 }

@@ -121,12 +121,14 @@ export class ParagraphRef extends ElRef<docs_v1.Schema$Paragraph> {
       })
     }
 
-    this.mutator.request({
-      insertText: {
-        location: { index: startIndex },
-        text: updated
-      }
-    })
+    if (updated.length > 0) {
+      this.mutator.request({
+        insertText: {
+          location: { index: startIndex },
+          text: updated
+        }
+      })
+    }
 
     const next = found.text.slice(0, offset) + updated + found.text.slice(offset + length)
     found.text = next
@@ -146,12 +148,14 @@ export class ParagraphRef extends ElRef<docs_v1.Schema$Paragraph> {
       })
     }
     
-    this.mutator.request({
-      insertText: {
+    if (updated.length > 0) {
+      this.mutator.request({
+        insertText: {
         location: { index: this.startIndex },
         text: updated
-      }
-    })
+        }
+      })
+    }
 
     const span = this._spans[this._spans.length - 1]
     span.text = updated + '\n'
