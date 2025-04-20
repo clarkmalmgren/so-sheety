@@ -4,6 +4,7 @@ import { Grid, RowObject } from '../grid/Grid'
 import { Row } from '../grid/Row'
 import { toCellValue } from './converters'
 import { TableRefControls } from './refs/TableRef'
+import { TextStyle, ParagraphStyle, TableCellStyle, extractGoogleStyle } from './styles'
 
 function arr<T>(len: number, fn: (i: number) => T): T[] {
   const a: T[] = []
@@ -22,6 +23,8 @@ function toText(v: CellValue): string {
   if (typeof v === 'undefined') { return '' }
   return `${v}`
 }
+
+export type TableStyle = TextStyle & ParagraphStyle & TableCellStyle
 
 export class Table extends Grid {
 
@@ -157,7 +160,7 @@ export class Table extends Grid {
     const rawRow = row + this.frozenRowCount
     
     // Apply the table cell style (if it was included)
-    const tableCellStyle = toTableCellStyle(style)
+    const tableCellStyle = extractGoogleStyle(style, 'tableCell')
     if (Object.keys(tableCellStyle).length > 0) {
       this.controls.mutator.request({
         updateTableCellStyle: {
@@ -177,8 +180,8 @@ export class Table extends Grid {
     }
 
     // Get the text & paragraph styles. If they're both empty, return early before calculating all the offsets
-    const textStyle = toTextStyle(style)
-    const paragraphStyle = toParagraphStyle(style)
+    const textStyle = extractGoogleStyle(style, 'text')
+    const paragraphStyle = extractGoogleStyle(style, 'paragraph')
     if (Object.keys(textStyle).length === 0 && Object.keys(paragraphStyle).length === 0) { return }
 
     // Calculate the start index of the cell
@@ -218,85 +221,6 @@ export class Table extends Grid {
   styleRow(style: TableStyle, row: number): void {
     const rawRow = row + this.frozenRowCount
     this.style(style, row, 0, this._rows[rawRow].cells.length)
-  }
-}
-
-export type TableStyle = {
-  textColor?: string
-  bold?: boolean
-  italic?: boolean
-  underline?: boolean
-  strikethrough?: boolean
-  fontSize?: number
-  fontFamily?: string
-
-  backgroundColor?: string
-  padding?: number
-
-  verticalAlignment?: 'TOP' | 'MIDDLE' | 'BOTTOM'
-  horizontalAlignment?: 'START' | 'CENTER' | 'END' | 'JUSTIFY'
-}
-
-function toParagraphStyle(style: TableStyle): docs_v1.Schema$ParagraphStyle {
-  const ps: docs_v1.Schema$ParagraphStyle = {}
-
-  if (style.horizontalAlignment) { ps.alignment = style.horizontalAlignment }
-
-  return ps
-}
-
-function toTextStyle(style: TableStyle): docs_v1.Schema$TextStyle {
-  const ps: docs_v1.Schema$TextStyle = {}
-
-  if (style.textColor) { ps.foregroundColor = hexToColor(style.textColor) }
-  if (typeof style.bold === 'boolean') { ps.bold = style.bold }
-  if (typeof style.italic === 'boolean') { ps.italic = style.italic }
-  if (typeof style.underline === 'boolean') { ps.underline = style.underline }
-  if (typeof style.strikethrough === 'boolean') { ps.strikethrough = style.strikethrough }
-  if (style.fontSize) { ps.fontSize = { unit: 'PT', magnitude: style.fontSize } }
-  if (style.fontFamily) { ps.weightedFontFamily = { fontFamily: style.fontFamily } }
-
-  return ps
-}
-
-function toTableCellStyle(style: TableStyle): docs_v1.Schema$TableCellStyle {
-  const ts: docs_v1.Schema$TableCellStyle = {}
-
-  if (style.backgroundColor) {
-    ts.backgroundColor = hexToColor(style.backgroundColor)
-  }
-
-  if (style.padding) {
-    const pad = { unit: 'PT', magnitude: style.padding * 72 }
-    ts.paddingTop =    pad
-    ts.paddingBottom = pad
-    ts.paddingLeft =   pad
-    ts.paddingRight =  pad
-  }
-
-  if (style.verticalAlignment) {
-    ts.contentAlignment = style.verticalAlignment
-  }
-
-  return ts
-}
-
-function hexToColor(hex: string): docs_v1.Schema$OptionalColor {
-  hex = hex.replace("#", "");
-
-  // Handle 3-digit hex codes
-  if (hex.length === 3) {
-    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-  }
-
-  return {
-    color: {
-      rgbColor: {
-        red: parseInt(hex.slice(0, 2), 16) / 255,
-        green: parseInt(hex.slice(2, 4), 16) / 255,
-        blue: parseInt(hex.slice(4, 6), 16) / 255
-      }
-    }
   }
 }
 

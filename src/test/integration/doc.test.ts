@@ -163,4 +163,47 @@ describe('Document', () => {
       verifyTail(refreshed)
     })
   })
+
+  describe('lists', () => {
+    it('should be able to add to a list', async () => {
+      const p = doc.find(r => isParagraph(r) && r.text === 'Three') as ParagraphRef | undefined
+      if (!p) { throw new Error('List item not found') }
+
+      const next = p.insertParagraph('Example Heading [link] - tktk')
+      next.styleText({ bold: true }, 0, 15)
+      next.styleText({ link: 'https://www.google.com' }, 17, 21)
+
+      mutateTail()
+      await doc.commit()
+
+      const refreshed = await getRefreshedDoc()
+      const ref = refreshed.find(r => isParagraph(r) && r.text === 'Three') as ParagraphRef | undefined
+      if (!ref) { throw new Error('Heading not found') }
+
+      expect((ref.next as ParagraphRef).text).toMatch(/^Example Heading/)
+      verifyTail(refreshed)
+    })
+
+    it('should be able to add to a list by appending parts of the text', async () => {
+      const p = doc.find(r => isParagraph(r) && r.text === 'Three') as ParagraphRef | undefined
+      if (!p) { throw new Error('List item not found') }
+
+      p.insertParagraph(
+        { text: 'Example Heading', style: { bold: true } },
+        ' [',
+        { text: 'link', style: { link: 'https://www.google.com' } },
+        '] - tktk'
+      )
+
+      mutateTail()
+      await doc.commit()
+
+      const refreshed = await getRefreshedDoc()
+      const ref = refreshed.find(r => isParagraph(r) && r.text === 'Three') as ParagraphRef | undefined
+      if (!ref) { throw new Error('Heading not found') }
+
+      expect((ref.next as ParagraphRef).text).toMatch(/^Example Heading/)
+      verifyTail(refreshed)
+    })
+  })
 })

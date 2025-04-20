@@ -45,6 +45,10 @@ export abstract class ElRef<T extends ElInnerTypes> {
     this._next = next 
   }
 
+  setPrev(prev: ElRef<any>): void {
+    this._prev = prev
+  }
+
   /**
    * Find the first element that matches the selector.
    * 
