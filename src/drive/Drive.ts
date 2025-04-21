@@ -60,4 +60,12 @@ export class Drive {
       fields: 'id'
     })
   }
+
+  async createComment(fileId: string, comment: string, quote: string, anchor: string): Promise<void> {
+    await this.api.comments.create({
+      fileId,
+      requestBody: { content: comment, anchor, quotedFileContent: { mimeType: 'text/html', value: quote } },
+      fields: 'id'
+    })
+  }
 }

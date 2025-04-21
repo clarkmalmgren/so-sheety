@@ -205,5 +205,21 @@ describe('Document', () => {
       expect((ref.next as ParagraphRef).text).toMatch(/^Example Heading/)
       verifyTail(refreshed)
     })
+
+    it.only('should be able to add a comment', async () => {
+      doc.comment('alpha', 'Testing', 1, 'Testing'.length + 1)
+
+      mutateTail()
+      await doc.commit()
+
+      const refreshed = await getRefreshedDoc()
+
+      const comments = await setup.drive.getComments(doc.id)
+      expect(comments.length).toEqual(1)
+      expect(comments[0].content).toEqual('alpha')
+      expect(comments[0].anchor).toMatch(/^kix\..*$/)
+
+      verifyTail(refreshed)
+    })
   })
 })

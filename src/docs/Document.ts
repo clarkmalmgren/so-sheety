@@ -3,6 +3,7 @@ import { Auth } from '../Auth'
 import { isParagraph, isTable, parseEl } from './refs'
 import { ElRef, RefMatcher } from './refs/ElRef'
 import { TableRef } from './refs/TableRef'
+import { Drive } from '../drive/Drive'
 
 export type HeaderSelector = number | string | ((h: string) => boolean)
 
@@ -27,6 +28,17 @@ export type DocumentMutator = {
   commit(): Promise<void>
 }
 
+type CommentRequest = {
+  // The comment to insert
+  comment: string
+
+  // The text quoted by this comment
+  quote: string
+
+  // The index of the request in the batch
+  requestIndex: number
+}
+
 export class Document implements DocumentMutator {
 
   static async load(id: string, auth: Auth): Promise<Document> {
@@ -41,6 +53,7 @@ export class Document implements DocumentMutator {
   private _head?: ElRef<any>
   private _tail?: ElRef<any>
   private updates: docs_v1.Schema$Request[] = []
+  private commentRequests: CommentRequest[] = []
 
   constructor(
     public readonly id: string,
@@ -49,8 +62,15 @@ export class Document implements DocumentMutator {
     private document: docs_v1.Schema$Document
   ) {}
 
-  request(req: docs_v1.Schema$Request): void {
+  /**
+   * Add a request to the batch.
+   * 
+   * @param req - The request to add.
+   * @returns The index of the request in the batch.
+   */
+  request(req: docs_v1.Schema$Request): number {
     this.updates.push(req)
+    return this.updates.length - 1
   }
 
   async reload(): Promise<void> {
@@ -58,16 +78,19 @@ export class Document implements DocumentMutator {
     this._head = undefined
     this._tail = undefined
     this.updates = []
+    this.commentRequests = []
 
     this.document = await this.api.documents.get({ documentId: this.id })
   }
 
   get head(): ElRef<any> {
+    this.init()
     if (!this._head) { throw new Error('Head not initialized') }
     return this._head
   }
 
   get tail(): ElRef<any> {
+    this.init()
     if (!this._tail) { throw new Error('Tail not initialized') }
     return this._tail
   }
@@ -144,16 +167,48 @@ export class Document implements DocumentMutator {
     return tables
   }
 
+  comment(text: string, quote: string, start: number, end: number): void {
+    this.init()
+
+    const requestIndex = this.request({
+      createNamedRange: {
+        name: `comment_${start}-${end}`,
+        range: { startIndex: start, endIndex: end }
+      }
+    })
+
+    this.commentRequests.push({ comment: text, quote, requestIndex })
+  }
+
   async commit(): Promise<void> {
     this.init()
     if (this.updates.length === 0) { return }
 
-    await this.api.documents.batchUpdate({
+    const resp = await this.api.documents.batchUpdate({
       documentId: this.id,
       requestBody: { requests: this.updates }
     })
 
+    if (this.commentRequests.length > 0) {
+      const fileId = this.document.documentId
+      const drive = await Drive.load(this.auth)
+      if (!resp.data.replies) {
+        throw new Error(`Replies was empty`)
+      }
+
+      for (const req of this.commentRequests) {
+        if (!fileId) { throw new Error('Document ID not found') }
+
+        const range = resp.data.replies[req.requestIndex]?.createNamedRange
+        if (!range) { throw new Error(`Range not found, comment unable to be created`) }
+        if (!range.namedRangeId) { throw new Error(`Named range ID not found, comment unable to be created`) }
+        
+        drive.createComment(fileId, req.comment, req.quote, range.namedRangeId)
+      }
+    }
+
     this.updates = []
+    this.commentRequests = []
   }
 
 }
