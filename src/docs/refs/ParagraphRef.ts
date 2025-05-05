@@ -32,7 +32,7 @@ class SpanRef {
       throw new Error('TextRef must have a startIndex and endIndex')
     }
 
-    if (el.richLink) {
+    if (el.richLink || el.person) {
       this.readonly = true
     } else if (this.text.length !== (el.endIndex - el.startIndex)) {
       throw new Error('Text length must match the difference between startIndex and endIndex')
