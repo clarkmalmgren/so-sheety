@@ -2,7 +2,7 @@ import { CellValue, cellValuesEqual, isLink } from './CellValue'
 import { Row } from './Row'
 
 export type RowObject = { [header: string]: CellValue }
-export type ColumnLocator = string | number
+export type ColumnLocator = string | number | ((col: string) => boolean)
 
 export abstract class Grid {
 
@@ -27,8 +27,19 @@ export abstract class Grid {
     this.data = allData.slice(this.frozenRowCount)
   }
 
+  get columnNames(): string[] {
+    return Object.keys(this.columns)
+  }
+
   column(locator: ColumnLocator): number | undefined {
-    return typeof locator === 'number' ? locator : this.columns[locator]
+    if (typeof locator === 'number') {
+      return locator
+    } else if (typeof locator === 'string') {
+      return this.columns[locator]
+    } else {
+      const col = this.columnNames.find(name => locator(name))
+      return col ? this.columns[col] : undefined
+    }
   }
 
   get(row: number, col: ColumnLocator): CellValue {
