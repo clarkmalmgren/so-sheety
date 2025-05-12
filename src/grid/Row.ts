@@ -54,4 +54,8 @@ export class Row {
   setObj(obj: RowObject): void {
     Object.keys(obj).forEach(k => this.set(k, obj[k]))
   }
+
+  delete(): void {
+    this.grid.delete(this.offset)
+  }
 }

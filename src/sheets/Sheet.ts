@@ -79,4 +79,16 @@ export class Sheet extends Grid {
     })
   }
 
+  protected _delete(row: number): void {
+    const _row = row + this.frozenRowCount
+    this.updates.push({ deleteDimension: {
+      range: {
+        sheetId: this.sheetId,
+        dimension: 'ROWS',  
+        startIndex: _row,
+        endIndex: _row + 1
+      }
+    }})
+  }
+
 }

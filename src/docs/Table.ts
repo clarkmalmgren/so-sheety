@@ -222,6 +222,19 @@ export class Table extends Grid {
     const rawRow = row + this.frozenRowCount
     this.style(style, row, 0, this._rows[rawRow].cells.length)
   }
+
+  protected _delete(row: number): void {
+    const _row = row + this.frozenRowCount
+
+    this.controls.mutator.request({
+      deleteTableRow: {
+        tableCellLocation: {
+          tableStartLocation: { index: this.controls.startIndex() },
+          rowIndex: _row
+        }
+      }
+    })
+  }
 }
 
 class RowSize {

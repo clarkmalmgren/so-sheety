@@ -45,7 +45,7 @@ export abstract class Grid {
   get(row: number, col: ColumnLocator): CellValue {
     const cl = this.column(col)
     if (typeof cl === 'undefined') { return undefined }
-    return this.data[row][cl]
+    return this.data[row]?.[cl]
   }
 
   raw(offset: number): CellValue[] {
@@ -136,6 +136,14 @@ export abstract class Grid {
     const row = this.row(offset)
     row.setObj(obj)
     return row
+  }
+
+  protected abstract _delete(row: number): void
+
+  delete(row: number): void {
+    this.assertEditable()
+    this.data.splice(row, 1)
+    this._delete(row)
   }
 
   protected abstract _commit(): Promise<void>
